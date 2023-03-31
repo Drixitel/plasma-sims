@@ -6,12 +6,14 @@ PROGRAM MAIN
 
         INTEGER , PARAMETER :: fp = SELECTED_REAL_KIND( 15 , 307 )
 
+        INTEGER , PARAMETER :: ne = 12 , np = 9
+
         REAL(fp) :: m_e , m_p , q_e , q_p
         REAL(fp) :: k , G , M
         REAL(fp) , DIMENSION(3) :: Fe , Fg , Fm
         
-        REAL(fp) , DIMENSION(3,1) :: Electron_pos , Electron_vel , Electron_acc , Electron_acc2
-        REAL(fp) , DIMENSION(3,1) :: Proton_pos , Proton_vel , Proton_acc , Proton_acc2
+        REAL(fp) , DIMENSION(3,ne) :: Electron_pos , Electron_vel , Electron_acc , Electron_acc2
+        REAL(fp) , DIMENSION(3,np) :: Proton_pos , Proton_vel , Proton_acc , Proton_acc2
 
 
         REAL(fp) :: T , dT
@@ -34,7 +36,7 @@ PROGRAM MAIN
         M = 1.0E-7_fp
 
         T = 1E+0_fp
-        dT = 1E-6_fp
+        dT = 1E-4_fp
 
         n = NINT(T/dT)
 
@@ -53,7 +55,7 @@ PROGRAM MAIN
     Proton_vel = QUANTILE( Proton_vel , 0.0_fp )
 
     Proton_pos(2,1) = -1.0_fp * m_e / m_p
-    Proton_vel(1,1) = 14.0_fp * m_e / m_p
+    Proton_vel(1,1) = -14.0_fp * m_e / m_p
 
     DO count0 = 0 , n
 
@@ -64,158 +66,29 @@ PROGRAM MAIN
         END IF
 
         WRITE( unit = 1 , fmt = * ) ( electron_pos(1,count1) , electron_pos(2,count1) , electron_pos(3,count1) , &
-        & count1 = 1 , SIZE( Electron_pos , 2 ) )
+        & count1 = 1 , ne )
         WRITE( unit = 2 , fmt = * ) ( proton_pos(1,count1) , proton_pos(2,count1) , proton_pos(3,count1) , &
-        & count1 = 1 , SIZE( Proton_pos , 2 ) )
+        & count1 = 1 , np )
 
         Electron_acc(:,:) = 0._fp
         Electron_acc2(:,:) = 0._fp
         Proton_acc(:,:) = 0._fp
         Proton_acc2(:,:) = 0._fp
 
-        DO count1 = 1 , SIZE( Electron_pos , 2 )
-
-            DO count2 = 1 , count1 - 1
-
-                dx = Electron_pos(1,count1) - Electron_pos(1,count2)
-                dy = Electron_pos(2,count1) - Electron_pos(2,count2)
-                dz = Electron_pos(3,count1) - Electron_pos(3,count2)
-
-                r = sqrt( dx**2 + dy**2 + dz**2 )
-
-                Fe = k * q_e * q_e / r**2 * POINT( dx , dy , dz )
-                Fg = -G * m_e * m_e / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_e * q_e / r**2 * CROSS( Electron_vel(:,count2) , &
-                    & CROSS( Electron_vel(:,count1) , (/dx,dy,dz/)/r ) &
-                & )
-
-                Electron_acc(:,count1) = Electron_acc(:,count1) + ( Fe + Fg + Fm ) / m_e
-
-                Electron_acc(:,count2) = Electron_acc(:,count2) - ( Fe + Fg + Fm ) / m_e
-
-            END DO
-
-            DO count2 = 1 , SIZE( Proton_pos , 2 )
-
-                dx = Electron_pos(1,count1) - Proton_pos(1,count2)
-                dy = Electron_pos(2,count1) - Proton_pos(2,count2)
-                dz = Electron_pos(3,count1) - Proton_pos(3,count2)
-
-                r = sqrt( dx**2 + dy**2 + dz**2 )
-
-                Fe = k * q_e * q_p / r**2 * POINT( dx , dy , dz )
-                Fg = -G * m_e * m_p / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_e * q_p / r**2 * CROSS( Proton_vel(:,count2) , &
-                    & CROSS( Electron_vel(:,count1) , (/dx,dy,dz/)/r ) &
-                & )
-
-                Electron_acc(:,count1) = Electron_acc(:,count1) + ( Fe + Fg + Fm ) / m_e
-
-                Proton_acc(:,count2) = Proton_acc(:,count2) - ( Fe + Fg + Fm ) / m_p
-
-            END DO
-
-        END DO
-
-        DO count1 = 1 , SIZE( Proton_pos , 2 )
-
-            DO count2 = 1 , count1 - 1
-
-                dx = Proton_pos(1,count1) - Proton_pos(1,count2)
-                dy = Proton_pos(2,count1) - Proton_pos(2,count2)
-                dz = Proton_pos(3,count1) - Proton_pos(3,count2)
-    
-                r = sqrt( dx**2 + dy**2 + dz**2 )
-    
-                Fe = k * q_p * q_p / r**2 * POINT( dx , dy , dz )
-                Fg = -G * m_p * m_p / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_p * q_p / r**2 * CROSS( Proton_vel(:,count2) , &
-                    & CROSS( Proton_vel(:,count1) , (/dx,dy,dz/)/r ) &
-                & )
-
-                Proton_acc(:,count1) = Proton_acc(:,count1) + ( Fe + Fg + Fm ) / m_p
-
-                Proton_acc(:,count2) = Proton_acc(:,count2) - ( Fe + Fg + Fm ) / m_p
-
-            END DO
-
-        END DO
+        CALL CALC( Electron_pos , Electron_vel , Electron_acc , Proton_pos , Proton_vel , Proton_acc )
 
         Electron_pos = Electron_pos + Electron_vel * dT + 0.5 * Electron_acc * dT**2
 
         Proton_pos = Proton_pos + Proton_vel * dT + 0.5 * Proton_acc * dT**2
 
-        DO count1 = 1 , SIZE( Electron_pos , 2 )
-
-            DO count2 = 1 , count1 - 1
-
-                dx = Electron_pos(1,count1) - Electron_pos(1,count2)
-                dy = Electron_pos(2,count1) - Electron_pos(2,count2)
-                dz = Electron_pos(3,count1) - Electron_pos(3,count2)
-
-                r = sqrt( dx**2 + dy**2 + dz**2 )
-
-                Fe = k * q_e * q_e / r**2 * POINT( dx , dy , dz )
-                Fg = -G * m_e * m_e / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_e * q_e / r**2 * CROSS( Electron_vel(:,count2) , &
-                    & CROSS( Electron_vel(:,count1) , (/dx,dy,dz/)/r ) &
-                & )
-
-                Electron_acc2(:,count1) = Electron_acc2(:,count1) + ( Fe + Fg + Fm ) / m_e
-
-                Electron_acc2(:,count2) = Electron_acc2(:,count2) - ( Fe + Fg + Fm ) / m_e
-
-            END DO
-
-            DO count2 = 1 , SIZE( Proton_pos , 2 )
-
-                dx = Electron_pos(1,count1) - Proton_pos(1,count2)
-                dy = Electron_pos(2,count1) - Proton_pos(2,count2)
-                dz = Electron_pos(3,count1) - Proton_pos(3,count2)
-
-                r = sqrt( dx**2 + dy**2 + dz**2 )
-
-                Fe = k * q_e * q_p / r**2 * POINT( dx , dy , dz )
-                Fg = -G * m_e * m_p / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_e * q_p / r**2 * CROSS( Proton_vel(:,count2) , &
-                    & CROSS( Electron_vel(:,count1) , (/dx,dy,dz/)/r ) &
-                & )
-
-                Electron_acc2(:,count1) = Electron_acc2(:,count1) + ( Fe + Fg + Fm ) / m_e
-
-                Proton_acc2(:,count2) = Proton_acc2(:,count2) - ( Fe + Fg + Fm ) / m_p
-
-            END DO
-
-        END DO
-
-        DO count1 = 1 , SIZE( Proton_pos , 2 )
-
-            DO count2 = 1 , count1 - 1
-
-                dx = Proton_pos(1,count1) - Proton_pos(1,count2)
-                dy = Proton_pos(2,count1) - Proton_pos(2,count2)
-                dz = Proton_pos(3,count1) - Proton_pos(3,count2)
-    
-                r = sqrt( dx**2 + dy**2 + dz**2 )
-    
-                Fe = k * q_p * q_p / r**2 * POINT( dx , dy , dz )
-                Fg = -G * m_p * m_p / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_p * q_p / r**2 * CROSS( Proton_vel(:,count2) , &
-                    & CROSS( Proton_vel(:,count1) , (/dx,dy,dz/)/r ) &
-                & )
-
-                Proton_acc2(:,count1) = Proton_acc2(:,count1) + ( Fe + Fg + Fm ) / m_p
-
-                Proton_acc2(:,count2) = Proton_acc2(:,count2) - ( Fe + Fg + Fm ) / m_p
-
-            END DO
-
-        END DO
+        CALL CALC( Electron_pos , Electron_vel , Electron_acc2 , Proton_pos , Proton_vel , Proton_acc2 )
 
         Electron_vel = Electron_vel + 0.5 * ( Electron_acc + Electron_acc2 ) * dT
 
         Proton_vel = Proton_vel + 0.5 * ( Proton_acc + Proton_acc2 ) * dT
+
+        !Electron_pos = Electron_pos + Electron_vel*dT + ( A + 2*B + 2*C + D )/6
+        !Proton_pos = Proton_pos + Proton_vel*dT + ( A + 2*B + 2*C + D )/6
 
     END DO
 
@@ -225,13 +98,18 @@ PROGRAM MAIN
 
             IMPLICIT NONE
 
-            REAL(fp) , DIMENSION(SIZE(Electron_pos,1),SIZE(Electron_pos,2)) :: QUANTILE , arg
+            REAL(fp) , DIMENSION(:,:) :: arg
+            REAL(fp) , ALLOCATABLE , DIMENSION(:,:) :: QUANTILE
         
             REAL(fp) :: std_dev
+
+            ALLOCATE(QUANTILE(3,MIN(ne,np):MAX(ne,np)))
 
             CALL RANDOM_NUMBER(arg)
         
             QUANTILE = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
+
+            DEALLOCATE( QUANTILE )
         
         END FUNCTION QUANTILE
 
@@ -258,6 +136,81 @@ PROGRAM MAIN
             CROSS(3) = a(1)*b(2) - a(2)*b(1)
             
         END FUNCTION CROSS
+
+        SUBROUTINE CALC( arg1 , arg2 , arg3 , arg4 , arg5 , arg6 )
+
+            REAL(fp) , DIMENSION(3,ne) :: arg1 , arg2 , arg3
+            REAL(fp) , DIMENSION(3,np) :: arg4 , arg5 , arg6
+
+            DO count1 = 1 , ne
+
+                DO count2 = 1 , count1 - 1
+    
+                    dx = arg1(1,count1) - arg1(1,count2)
+                    dy = arg1(2,count1) - arg1(2,count2)
+                    dz = arg1(3,count1) - arg1(3,count2)
+    
+                    r = sqrt( dx**2 + dy**2 + dz**2 )
+    
+                    Fe = k * q_e * q_e / r**2 * POINT( dx , dy , dz )
+                    Fg = -G * m_e * m_e / r**2 * POINT( dx , dy , dz )
+                    Fm = M * q_e * q_e / r**2 * CROSS( arg2(:,count2) , &
+                        & CROSS( arg2(:,count1) , (/dx,dy,dz/)/r ) &
+                    & )
+    
+                    arg3(:,count1) = arg3(:,count1) + ( Fe + Fg + Fm ) / m_e
+    
+                    arg3(:,count2) = arg3(:,count2) - ( Fe + Fg + Fm ) / m_e
+    
+                END DO
+    
+                DO count2 = 1 , np
+    
+                    dx = arg1(1,count1) - arg4(1,count2)
+                    dy = arg1(2,count1) - arg4(2,count2)
+                    dz = arg1(3,count1) - arg4(3,count2)
+    
+                    r = sqrt( dx**2 + dy**2 + dz**2 )
+    
+                    Fe = k * q_e * q_p / r**2 * POINT( dx , dy , dz )
+                    Fg = -G * m_e * m_p / r**2 * POINT( dx , dy , dz )
+                    Fm = M * q_e * q_p / r**2 * CROSS( arg5(:,count2) , &
+                        & CROSS( arg2(:,count1) , (/dx,dy,dz/)/r ) &
+                    & )
+    
+                    arg3(:,count1) = arg3(:,count1) + ( Fe + Fg + Fm ) / m_e
+    
+                    arg6(:,count2) = arg6(:,count2) - ( Fe + Fg + Fm ) / m_p
+    
+                END DO
+    
+            END DO
+    
+            DO count1 = 1 , np
+    
+                DO count2 = 1 , count1 - 1
+    
+                    dx = arg4(1,count1) - arg4(1,count2)
+                    dy = arg4(2,count1) - arg4(2,count2)
+                    dz = arg4(3,count1) - arg4(3,count2)
+        
+                    r = sqrt( dx**2 + dy**2 + dz**2 )
+        
+                    Fe = k * q_p * q_p / r**2 * POINT( dx , dy , dz )
+                    Fg = -G * m_p * m_p / r**2 * POINT( dx , dy , dz )
+                    Fm = M * q_p * q_p / r**2 * CROSS( arg5(:,count2) , &
+                        & CROSS( arg5(:,count1) , (/dx,dy,dz/)/r ) &
+                    & )
+    
+                    arg6(:,count1) = arg6(:,count1) + ( Fe + Fg + Fm ) / m_p
+    
+                    arg6(:,count2) = arg6(:,count2) - ( Fe + Fg + Fm ) / m_p
+    
+                END DO
+    
+            END DO
+
+        END SUBROUTINE CALC
 
     !
 
