@@ -33,7 +33,7 @@ PROGRAM MAIN
         G = 6.6743E-11_fp
         M = 1.0E-7_fp
 
-        T = 1E+0_fp
+        T = 1E+0_fp ! set in init
         dT = 1E-6_fp
 
         n = NINT(T/dT)

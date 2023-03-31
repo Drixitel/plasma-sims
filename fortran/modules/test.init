@@ -1,0 +1,9 @@
+num_electrons 1
+num_protons 1
+std_width_e_pos 0.0
+std_width_e_vel 0.0
+std_width_p_pos 0.0
+std_width_p_vel 0.0
+num_steps 10000
+time_final 50.0
+run_name test
