@@ -52,8 +52,8 @@ PROGRAM MAIN
     Proton_pos = QUANTILE( Proton_pos , 0.0_fp )
     Proton_vel = QUANTILE( Proton_vel , 0.0_fp )
 
-    Proton_pos(2,1) = -1.0_fp * m_e / m_p
-    Proton_vel(1,1) = 14.0_fp * m_e / m_p
+    Proton_pos(2,1) = -1.0_fp * m_e / m_p   !something something com
+    Proton_vel(1,1) = -14.0_fp * m_e / m_p
 
     DO count0 = 0 , n
 
@@ -105,7 +105,7 @@ PROGRAM MAIN
 
                 Fe = k * q_e * q_p / r**2 * POINT( dx , dy , dz )
                 Fg = -G * m_e * m_p / r**2 * POINT( dx , dy , dz )
-                Fm = M * q_e * q_p / r**2 * CROSS( Proton_vel(:,count2) , &
+                Fm = M * q_e * q_p / r**2 * CROSS( Proton_vel(:,count2) , & ! vx(rxv)
                     & CROSS( Electron_vel(:,count1) , (/dx,dy,dz/)/r ) &
                 & )
 
