@@ -6,7 +6,7 @@ PROGRAM MAIN
 
         INTEGER , PARAMETER :: fp = SELECTED_REAL_KIND( 15 , 307 )
 
-        INTEGER , PARAMETER :: ne = 4 , np = 3
+        INTEGER , PARAMETER :: ne = 40 , np = 40
 
         REAL(fp) :: m_e , m_p , q_e , q_p
         REAL(fp) :: k , G , M
@@ -45,19 +45,11 @@ PROGRAM MAIN
     OPEN( unit = 1 , file = "nbody_e.txt" )
     OPEN( unit = 2 , file = "nbody_p.txt" )
 
-    CALL QUANTILE( Electron_pos , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
-    CALL QUANTILE( Electron_vel , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
+    CALL QUANTILE( Electron_pos , 0.4_fp , (/1.0_fp,0.0_fp,0.0_fp/) )
+    CALL QUANTILE( Electron_vel , 0.4_fp , (/0.0_fp,20.0_fp,0.0_fp/) )
 
-    Electron_pos(2,1) = 1.0_fp
-    Electron_vel(1,1) = 14.0_fp
-
-    CALL QUANTILE( Proton_pos , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
-    CALL QUANTILE( Proton_vel , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
-
-    PRINT * , Proton_pos(:,1)
-
-    Proton_pos(2,1) = -1.0_fp * m_e / m_p
-    Proton_vel(1,1) = -14.0_fp * m_e / m_p
+    CALL QUANTILE( Proton_pos , 0.4_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
+    CALL QUANTILE( Proton_vel , 0.4_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
 
     DO count0 = 0 , n
 
