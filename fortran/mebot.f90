@@ -6,7 +6,7 @@ PROGRAM MAIN
 
         INTEGER , PARAMETER :: fp = SELECTED_REAL_KIND( 15 , 307 )
 
-        INTEGER , PARAMETER :: ne = 12 , np = 9
+        INTEGER , PARAMETER :: ne = 1 , np = 1
 
         REAL(fp) :: m_e , m_p , q_e , q_p
         REAL(fp) :: k , G , M
@@ -45,25 +45,21 @@ PROGRAM MAIN
     OPEN( unit = 1 , file = "nbody_e.txt" )
     OPEN( unit = 2 , file = "nbody_p.txt" )
 
-    Electron_pos = QUANTILE( Electron_pos , 0.0_fp )
-    Electron_vel = QUANTILE( Electron_vel , 0.0_fp )
+    CALL QUANTILE( Electron_pos , 0.0_fp )
+    CALL QUANTILE( Electron_vel , 0.0_fp )
 
     Electron_pos(2,1) = 1.0_fp
     Electron_vel(1,1) = 14.0_fp
 
-    Proton_pos = QUANTILE( Proton_pos , 0.0_fp )
-    Proton_vel = QUANTILE( Proton_vel , 0.0_fp )
+    CALL QUANTILE( Proton_pos , 0.0_fp )
+    CALL QUANTILE( Proton_vel , 0.0_fp )
+
+    PRINT * , Proton_pos(:,1)
 
     Proton_pos(2,1) = -1.0_fp * m_e / m_p
     Proton_vel(1,1) = -14.0_fp * m_e / m_p
 
     DO count0 = 0 , n
-
-        IF ( MOD(count0,n/1000) == 0 ) THEN
-
-            PRINT * , count0
-
-        END IF
 
         WRITE( unit = 1 , fmt = * ) ( electron_pos(1,count1) , electron_pos(2,count1) , electron_pos(3,count1) , &
         & count1 = 1 , ne )
@@ -93,25 +89,20 @@ PROGRAM MAIN
     END DO
 
     CONTAINS
-    
-        FUNCTION QUANTILE( arg , std_dev )
+
+        SUBROUTINE QUANTILE( arg , std_dev )
 
             IMPLICIT NONE
 
             REAL(fp) , DIMENSION(:,:) :: arg
-            REAL(fp) , ALLOCATABLE , DIMENSION(:,:) :: QUANTILE
         
             REAL(fp) :: std_dev
 
-            ALLOCATE(QUANTILE(3,MIN(ne,np):MAX(ne,np)))
-
             CALL RANDOM_NUMBER(arg)
-        
-            QUANTILE = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
 
-            DEALLOCATE( QUANTILE )
-        
-        END FUNCTION QUANTILE
+            arg = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
+
+        END SUBROUTINE QUANTILE
 
         FUNCTION POINT( diff_x , diff_y , diff_z )
 
