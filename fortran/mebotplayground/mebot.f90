@@ -12,8 +12,13 @@ PROGRAM MAIN
         REAL(fp) :: k , G , M
         REAL(fp) , DIMENSION(3) :: Fe , Fg , Fm
         
-        REAL(fp) , DIMENSION(3,ne) :: Electron_pos , Electron_vel , Electron_acc , Electron_acc2
-        REAL(fp) , DIMENSION(3,np) :: Proton_pos , Proton_vel , Proton_acc , Proton_acc2
+        REAL(fp) , DIMENSION(3,ne) :: Electron_pos , Electron_vel
+        REAL(fp) , DIMENSION(3,ne) :: Electron_acc , Electron_acc2 , Electron_acc3 , Electron_acc4
+        REAL(fp) , DIMENSION(3,ne) :: Electron_acc5 , Electron_acc6 , Electron_acc7 , Electron_acc8
+
+        REAL(fp) , DIMENSION(3,np) :: Proton_pos , Proton_vel
+        REAL(fp) , DIMENSION(3,np) :: Proton_acc , Proton_acc2 , Proton_acc3 , Proton_acc4
+        REAL(fp) , DIMENSION(3,np) :: Proton_acc5 , Proton_acc6 , Proton_acc7 , Proton_acc8
 
 
         REAL(fp) :: T , dT
@@ -53,30 +58,57 @@ PROGRAM MAIN
 
     DO count0 = 0 , n
 
+        IF ( MOD(count0,n/1000) == 0 ) THEN
+
+            PRINT * , count0
+
+        END IF
+
         WRITE( unit = 1 , fmt = * ) ( electron_pos(1,count1) , electron_pos(2,count1) , electron_pos(3,count1) , &
         & count1 = 1 , ne )
         WRITE( unit = 2 , fmt = * ) ( proton_pos(1,count1) , proton_pos(2,count1) , proton_pos(3,count1) , &
         & count1 = 1 , np )
 
-        Electron_acc(:,:) = 0._fp
-        Electron_acc2(:,:) = 0._fp
-        Proton_acc(:,:) = 0._fp
-        Proton_acc2(:,:) = 0._fp
+        Electron_acc = 0.0_fp
+        Electron_acc2 = 0.0_fp
+        Proton_acc = 0.0_fp
+        Proton_acc2 = 0.0_fp
 
-        CALL CALC( Electron_pos , Electron_vel , Electron_acc , Proton_pos , Proton_vel , Proton_acc )
+        CALL CALC( Electron_pos , Electron_vel , Electron_acc , &
+        & Proton_pos , Proton_vel , Proton_acc )
 
-        Electron_pos = Electron_pos + Electron_vel * dT + 0.5 * Electron_acc * dT**2
+        CALL CALC( Electron_pos + Electron_acc * dT**2 /4 , Electron_vel , Electron_acc2 , &
+        & Proton_pos + Proton_acc * dT**2 /4, Proton_vel , Proton_acc2 )
 
-        Proton_pos = Proton_pos + Proton_vel * dT + 0.5 * Proton_acc * dT**2
+        CALL CALC( Electron_pos + Electron_acc2 * dT**2 /4 , Electron_vel , Electron_acc3 , &
+        & Proton_pos + Proton_acc2 * dT**2 /4, Proton_vel , Proton_acc3 )
 
-        CALL CALC( Electron_pos , Electron_vel , Electron_acc2 , Proton_pos , Proton_vel , Proton_acc2 )
+        CALL CALC( Electron_pos + Electron_acc3 * dT**2 /4 , Electron_vel , Electron_acc4 , &
+        & Proton_pos + Proton_acc3 * dT**2 /4, Proton_vel , Proton_acc4 )
 
-        Electron_vel = Electron_vel + 0.5 * ( Electron_acc + Electron_acc2 ) * dT
+        CALL CALC( Electron_pos , Electron_vel , Electron_acc5 , &
+        & Proton_pos , Proton_vel , Proton_acc5 )
 
-        Proton_vel = Proton_vel + 0.5 * ( Proton_acc + Proton_acc2 ) * dT
+        CALL CALC( Electron_pos , Electron_vel + Electron_acc5 * dT/2 , Electron_acc6 , &
+        & Proton_pos , Proton_vel + Proton_acc5 * dT/2 , Proton_acc6 )
 
-        !Electron_pos = Electron_pos + Electron_vel*dT + ( A + 2*B + 2*C + D )/6
-        !Proton_pos = Proton_pos + Proton_vel*dT + ( A + 2*B + 2*C + D )/6
+        CALL CALC( Electron_pos , Electron_vel + Electron_acc6 * dT/2 , Electron_acc7 , &
+        & Proton_pos , Proton_vel + Proton_acc6 * dT/2 , Proton_acc7 )
+
+        CALL CALC( Electron_pos , Electron_vel + Electron_acc7 * dT/2 , Electron_acc8 , &
+        & Proton_pos , Proton_vel + Proton_acc7 * dT/2 , Proton_acc8 )
+
+        Electron_pos = Electron_pos + Electron_vel * dT + &
+        &( Electron_acc + Electron_acc2 + Electron_acc3 + Electron_acc4 ) * dT**2 /6
+
+        Proton_pos = Proton_pos + Proton_vel * dT + &
+        &( Proton_acc + Proton_acc2 + Proton_acc3 + Proton_acc4 ) * dT**2 /6
+
+        Electron_vel = Electron_vel + &
+        &( Electron_acc5 + Electron_acc6 + Electron_acc7 + Electron_acc8 ) * dT**2 /6
+
+        Proton_vel = Proton_vel + &
+        &( Proton_acc5 + Proton_acc6 + Proton_acc7 + Proton_acc8 ) * dT**2 /6
 
     END DO
 
@@ -97,6 +129,8 @@ PROGRAM MAIN
         END FUNCTION POINT
 
         FUNCTION CROSS( a , b )
+
+            IMPLICIT NONE
 
             REAL(fp) , DIMENSION(3) :: CROSS , a , b
 
