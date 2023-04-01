@@ -18,6 +18,8 @@ module problemsetup
     real (fp), public :: stdEpos, stdEvel
     real (fp), public :: stdPpos, stdPvel
 
+
+
     real (fp), parameter, public :: m_e = 9.1093837015E-31_fp       ! mass: electron                
     real (fp), parameter, public :: m_p = 1.67262192369E-27_fp      ! mass: proton           
     real (fp), parameter, public :: q_e = -1.602176634E-19_fp       ! charge: electron          
@@ -38,17 +40,37 @@ module problemsetup
     real (fp), allocatable, public :: pvel(:,:,:)          ! velocity array 
     real (fp), allocatable, public :: time(:)              ! Time array
 
+    
+
     ! Subroutines
     public :: problemsetup_Init                           ! Subroutine for problem, reads files
-    public :: set_ics                                     ! Subroutine for Initial Conditions
+    public :: quantile
     
+
+
     
 contains
 
-!INITIAL CONDITIONS
-subroutine set_ics()
-    implicit none
-end subroutine set_ics
+    subroutine quantile(arg, std_dev, offset)
+        implicit none
+
+        real (fp), dimension(:,:) :: arg
+        real (fp), dimension(nDim) :: offset
+        real (fp) :: std_dev
+        integer :: i 
+
+        call random_number(arg)
+
+        arg = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
+
+        do i = 1, 3
+            arg(i,:) = arg(i,:) + offset(i)
+        end do
+
+        ! arg(1,:) = arg(1,:) + offset(1)
+        ! arg(2,:) = arg(2,:) + offset(2)
+        ! arg(3,:) = arg(3,:) + offset(3)
+    end subroutine quantile
 
 
 !INIT FILE SETUP 

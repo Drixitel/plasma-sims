@@ -9,12 +9,13 @@ program testing
     INTEGER , PARAMETER :: ne = 1 , np = 2
     real(fp), dimension(3,ne) :: Electron_pos
     real(fp), dimension(3,np) :: Proton_pos
-    real (fp), dimension(3) :: shift
+    real (fp), dimension(3) :: shift, shift2
 
     shift = (/0.0_fp,5.0_fp,0.0_fp/) 
+    shift2 = (/6.0_fp,5.0_fp,0.0_fp/) 
 
     call quantile( Electron_pos, 0.2_fp, shift)
-    call quantile( Proton_pos, 0.2_fp, shift)
+    call quantile( Proton_pos, 0.2_fp, shift2)
 
 
     print *, Electron_pos
