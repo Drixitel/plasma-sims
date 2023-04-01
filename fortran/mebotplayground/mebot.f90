@@ -6,7 +6,7 @@ PROGRAM MAIN
 
         INTEGER , PARAMETER :: fp = SELECTED_REAL_KIND( 15 , 307 )
 
-        INTEGER , PARAMETER :: ne = 1 , np = 1
+        INTEGER , PARAMETER :: ne = 4 , np = 3
 
         REAL(fp) :: m_e , m_p , q_e , q_p
         REAL(fp) :: k , G , M
@@ -45,14 +45,14 @@ PROGRAM MAIN
     OPEN( unit = 1 , file = "nbody_e.txt" )
     OPEN( unit = 2 , file = "nbody_p.txt" )
 
-    CALL QUANTILE( Electron_pos , 0.0_fp )
-    CALL QUANTILE( Electron_vel , 0.0_fp )
+    CALL QUANTILE( Electron_pos , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
+    CALL QUANTILE( Electron_vel , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
 
     Electron_pos(2,1) = 1.0_fp
     Electron_vel(1,1) = 14.0_fp
 
-    CALL QUANTILE( Proton_pos , 0.0_fp )
-    CALL QUANTILE( Proton_vel , 0.0_fp )
+    CALL QUANTILE( Proton_pos , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
+    CALL QUANTILE( Proton_vel , 1.0_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
 
     PRINT * , Proton_pos(:,1)
 
@@ -90,20 +90,6 @@ PROGRAM MAIN
 
     CONTAINS
 
-        SUBROUTINE QUANTILE( arg , std_dev )
-
-            IMPLICIT NONE
-
-            REAL(fp) , DIMENSION(:,:) :: arg
-        
-            REAL(fp) :: std_dev
-
-            CALL RANDOM_NUMBER(arg)
-
-            arg = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
-
-        END SUBROUTINE QUANTILE
-
         FUNCTION POINT( diff_x , diff_y , diff_z )
 
             IMPLICIT NONE
@@ -127,6 +113,26 @@ PROGRAM MAIN
             CROSS(3) = a(1)*b(2) - a(2)*b(1)
             
         END FUNCTION CROSS
+
+        SUBROUTINE QUANTILE( arg , std_dev , offset )
+
+            IMPLICIT NONE
+
+            REAL(fp) , DIMENSION(:,:) :: arg
+        
+            REAL(fp) , DIMENSION(3) :: offset
+
+            REAL(fp) :: std_dev
+
+            CALL RANDOM_NUMBER(arg)
+
+            arg = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
+
+            arg(1,:) = arg(1,:) + offset(1)
+            arg(2,:) = arg(2,:) + offset(2)
+            arg(3,:) = arg(3,:) + offset(3)
+
+        END SUBROUTINE QUANTILE
 
         SUBROUTINE CALC( arg1 , arg2 , arg3 , arg4 , arg5 , arg6 )
 
