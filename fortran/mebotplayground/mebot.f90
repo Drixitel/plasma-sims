@@ -1,132 +1,138 @@
 PROGRAM MAIN
 
     ! DECLARATIONS
-
+    
         IMPLICIT NONE
 
         INTEGER , PARAMETER :: fp = SELECTED_REAL_KIND( 15 , 307 )
+        INTEGER , PARAMETER :: ip = SELECTED_INT_KIND(9)
 
-        INTEGER , PARAMETER :: ne = 40 , np = 40
+        INTEGER(ip) :: n , count0 , count1 , count2
 
-        REAL(fp) :: m_e , m_p , q_e , q_p
-        REAL(fp) :: k , G , M
-        REAL(fp) , DIMENSION(3) :: Fe , Fg , Fm
-        
-        REAL(fp) , DIMENSION(3,ne) :: Electron_pos , Electron_vel
-        REAL(fp) , DIMENSION(3,ne) :: Electron_acc , Electron_acc2 , Electron_acc3 , Electron_acc4
-        REAL(fp) , DIMENSION(3,ne) :: Electron_acc5 , Electron_acc6 , Electron_acc7 , Electron_acc8
+        INTEGER(ip) , PARAMETER :: ne = 1 , np = 1
 
-        REAL(fp) , DIMENSION(3,np) :: Proton_pos , Proton_vel
-        REAL(fp) , DIMENSION(3,np) :: Proton_acc , Proton_acc2 , Proton_acc3 , Proton_acc4
-        REAL(fp) , DIMENSION(3,np) :: Proton_acc5 , Proton_acc6 , Proton_acc7 , Proton_acc8
+        REAL(fp) , DIMENSION(3,ne) :: e_r , e_v , e_a , e_a2
 
+        REAL(fp) , DIMENSION(3,np) :: p_r , p_v , p_a , p_a2
 
         REAL(fp) :: T , dT
-        REAL(fp) :: dx , dy , dz , r
 
-        INTEGER :: n , count0 , count1 , count2
+        REAL(fp) , DIMENSION(3) :: Fe , Fg , Fm
+        REAL(fp) , DIMENSION(3) :: r
+
+        REAL(fp) :: KE_e , KE_p , U_g , U_e , U_m
 
     !
 
     ! DEFINITIONS
 
-        m_e = 9.1093837015E-31_fp
-        m_p = 1.67262192369E-27_fp
+        REAL(fp) , PARAMETER :: pi = 4*atan(1.0_fp) , c = 299792458 , k = c**2*1.0E-7_fp , G = 6.67408E-11_fp , M = 1.0E-7_fp
 
-        q_e = -1.602176634E-19_fp
-        q_p = 1.602176634E-19_fp
+        REAL(fp) , PARAMETER :: m_e = 9.1093837015E-31_fp , m_p = 1.67262192369E-27_fp
+        REAL(fp) , PARAMETER :: q_e = -1.6021766208E-19_fp , q_p = 1.6021766208E-19_fp
 
-        k = 8.987551782E9_fp
-        G = 6.6743E-11_fp
-        M = 1.0E-7_fp
-
-        T = 1E+0_fp
-        dT = 1E-4_fp
+        T = 1.0E+0_fp
+        dT = 1.0E-4_fp
 
         n = NINT(T/dT)
 
     !
 
-    OPEN( unit = 1 , file = "nbody_e.txt" )
-    OPEN( unit = 2 , file = "nbody_p.txt" )
+    OPEN( unit = 1 , file = "nbody_e2.txt" )
+    OPEN( unit = 2 , file = "nbody_p2.txt" )
+    OPEN( unit = 3 , file = "energy2.txt" )
 
-    CALL QUANTILE( Electron_pos , 0.4_fp , (/1.0_fp,0.0_fp,0.0_fp/) )
-    CALL QUANTILE( Electron_vel , 0.4_fp , (/0.0_fp,20.0_fp,0.0_fp/) )
+    CALL QUANTILE( e_r , 0.0_fp , (/1.0_fp,0.0_fp,0.0_fp/) )
+    CALL QUANTILE( e_v , 0.0_fp , (/0.0_fp,14.0_fp,0.0_fp/) )
+    
+    CALL QUANTILE( p_r , 0.0_fp , (/-1.0_fp,0.0_fp,0.0_fp/)*m_e/m_p )
+    CALL QUANTILE( p_v , 0.0_fp , (/0.0_fp,-14.0_fp,0.0_fp/)*m_e/m_p )
 
-    CALL QUANTILE( Proton_pos , 0.4_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
-    CALL QUANTILE( Proton_vel , 0.4_fp , (/0.0_fp,0.0_fp,0.0_fp/) )
+    DO count0 = 1 , n
 
-    DO count0 = 0 , n
+        WRITE( unit = 1 , fmt = * ) ( e_r(:,count1) , count1 = 1 , ne )
+        WRITE( unit = 2 , fmt = * ) ( p_r(:,count1) , count1 = 1 , np )
 
-        IF ( MOD(count0,n/1000) == 0 ) THEN
+        KE_e = SUM( m_e/2 * NORM2(e_v,1)**2 )
+        KE_p = SUM( m_p/2 * NORM2(p_v,1)**2 )
 
-            PRINT * , count0
+        U_g = 0
+        U_e = 0
+        U_m = 0
 
-        END IF
+        DO count1 = 1 , ne
 
-        WRITE( unit = 1 , fmt = * ) ( electron_pos(1,count1) , electron_pos(2,count1) , electron_pos(3,count1) , &
-        & count1 = 1 , ne )
-        WRITE( unit = 2 , fmt = * ) ( proton_pos(1,count1) , proton_pos(2,count1) , proton_pos(3,count1) , &
-        & count1 = 1 , np )
+            DO count2 = 1 , count1 - 1
 
-        Electron_acc = 0.0_fp
-        Electron_acc2 = 0.0_fp
-        Proton_acc = 0.0_fp
-        Proton_acc2 = 0.0_fp
+                r = e_r(:,count1) - e_r(:,count2)
 
-        CALL CALC( Electron_pos , Electron_vel , Electron_acc , &
-        & Proton_pos , Proton_vel , Proton_acc )
+                U_g = U_g - G * m_e * m_e / NORM2(r)**2
+                U_e = U_e + k * q_e * q_e / NORM2(r)**2
+                U_m = U_m + DOT_PRODUCT( -9.2847647043E-24_fp*UNIT(e_v(:,count1)) , M*q_e/NORM2(r)**2*CROSS( e_v(:,count2) , r ) )
 
-        CALL CALC( Electron_pos + Electron_acc * dT**2 /4 , Electron_vel , Electron_acc2 , &
-        & Proton_pos + Proton_acc * dT**2 /4, Proton_vel , Proton_acc2 )
+            END DO
 
-        CALL CALC( Electron_pos + Electron_acc2 * dT**2 /4 , Electron_vel , Electron_acc3 , &
-        & Proton_pos + Proton_acc2 * dT**2 /4, Proton_vel , Proton_acc3 )
+            DO count2 = 1 , np
 
-        CALL CALC( Electron_pos + Electron_acc3 * dT**2 /4 , Electron_vel , Electron_acc4 , &
-        & Proton_pos + Proton_acc3 * dT**2 /4, Proton_vel , Proton_acc4 )
+                r = e_r(:,count1) - p_r(:,count2)
 
-        CALL CALC( Electron_pos , Electron_vel , Electron_acc5 , &
-        & Proton_pos , Proton_vel , Proton_acc5 )
+                U_g = U_g - G * m_e * m_p / NORM2(r)**2
+                U_e = U_e + k * q_e * q_p / NORM2(r)**2
+                U_m = U_m + DOT_PRODUCT( -9.2847647043E-24_fp*UNIT(e_v(:,count1)) , M*q_p/NORM2(r)**2*CROSS( p_v(:,count2) , r ) )
 
-        CALL CALC( Electron_pos , Electron_vel + Electron_acc5 * dT/2 , Electron_acc6 , &
-        & Proton_pos , Proton_vel + Proton_acc5 * dT/2 , Proton_acc6 )
+            END DO
 
-        CALL CALC( Electron_pos , Electron_vel + Electron_acc6 * dT/2 , Electron_acc7 , &
-        & Proton_pos , Proton_vel + Proton_acc6 * dT/2 , Proton_acc7 )
+        END DO
 
-        CALL CALC( Electron_pos , Electron_vel + Electron_acc7 * dT/2 , Electron_acc8 , &
-        & Proton_pos , Proton_vel + Proton_acc7 * dT/2 , Proton_acc8 )
+        DO count1 = 1 , np
 
-        Electron_pos = Electron_pos + Electron_vel * dT + &
-        &( Electron_acc + Electron_acc2 + Electron_acc3 + Electron_acc4 ) * dT**2 /6
+            DO count2 = 1 , count1 - 1
 
-        Proton_pos = Proton_pos + Proton_vel * dT + &
-        &( Proton_acc + Proton_acc2 + Proton_acc3 + Proton_acc4 ) * dT**2 /6
+                r = p_r(:,count1) - p_r(:,count2)
 
-        Electron_vel = Electron_vel + &
-        &( Electron_acc5 + Electron_acc6 + Electron_acc7 + Electron_acc8 ) * dT**2 /6
+                U_g = U_g - G * m_p * m_p / NORM2(r)**2
+                U_e = U_e + k * q_p * q_p / NORM2(r)**2
+                U_m = U_m + DOT_PRODUCT( 1.41060679736E-26_fp*UNIT(p_v(:,count1)) , M*q_p/NORM2(r)**2*CROSS( p_v(:,count2) , r ) )
 
-        Proton_vel = Proton_vel + &
-        &( Proton_acc5 + Proton_acc6 + Proton_acc7 + Proton_acc8 ) * dT**2 /6
+            END DO
 
+        END DO
+
+        WRITE( unit = 3 , fmt = * ) KE_e , KE_p , U_g , U_e , U_m
+
+        e_a = 0.0_fp
+        e_a2 = 0.0_fp
+
+        p_a = 0.0_fp
+        p_a2 = 0.0_fp
+
+        CALL CALC( e_r , e_v , e_a , p_r , p_v , p_a )
+
+        e_r = e_r + e_v * dT + 0.5 * e_a * dT**2
+
+        p_r = p_r + p_v * dT + 0.5 * p_a * dT**2
+
+        CALL CALC( e_r , e_v , e_a2 , p_r , p_v , p_a2 )
+
+        e_v = e_v + 0.5 * ( e_a + e_a2 ) * dT
+
+        p_v = p_v + 0.5 * ( p_a + p_a2 ) * dT
+    
     END DO
 
     CONTAINS
 
-        FUNCTION POINT( diff_x , diff_y , diff_z )
+        FUNCTION UNIT( vector )
 
             IMPLICIT NONE
 
-            REAL(fp) , DIMENSION(3) :: POINT
-            
-            REAL(fp) :: diff_x , diff_y , diff_z
+            REAL(fp) , DIMENSION(3) :: UNIT , vector
 
-            POINT(1) = cos(atan2( sqrt( diff_y**2 + diff_z**2 ) , diff_x ))
-            POINT(2) = cos(atan2( sqrt( diff_x**2 + diff_z**2 ) , diff_y ))
-            POINT(3) = cos(atan2( sqrt( diff_x**2 + diff_y**2 ) , diff_z ))
+            UNIT(1) = cos(atan2( sqrt( vector(2)**2 + vector(3)**2 ) , vector(1) ))
+            UNIT(2) = cos(atan2( sqrt( vector(1)**2 + vector(3)**2 ) , vector(2) ))
+            UNIT(3) = cos(atan2( sqrt( vector(1)**2 + vector(2)**2 ) , vector(3) ))
 
-        END FUNCTION POINT
+        END FUNCTION UNIT
 
         FUNCTION CROSS( a , b )
 
@@ -140,97 +146,81 @@ PROGRAM MAIN
             
         END FUNCTION CROSS
 
-        SUBROUTINE QUANTILE( arg , std_dev , offset )
+        SUBROUTINE QUANTILE( array , width , offset )
 
             IMPLICIT NONE
 
-            REAL(fp) , DIMENSION(:,:) :: arg
-        
+            REAL(fp) , DIMENSION(:,:) :: array
+
+            REAL(fp) :: width
+
             REAL(fp) , DIMENSION(3) :: offset
 
-            REAL(fp) :: std_dev
+            CALL RANDOM_NUMBER(array)
 
-            CALL RANDOM_NUMBER(arg)
+            array = width * ( 5*LOG(array/(1-array))/12 + 0.9*( array - 0.5 ) )
 
-            arg = std_dev * ( 5*LOG(arg/(1-arg))/12 + 0.9 * ( arg - 0.5 ) )
-
-            arg(1,:) = arg(1,:) + offset(1)
-            arg(2,:) = arg(2,:) + offset(2)
-            arg(3,:) = arg(3,:) + offset(3)
+            array(1,:) = array(1,:) + offset(1)
+            array(2,:) = array(2,:) + offset(2)
+            array(3,:) = array(3,:) + offset(3)
 
         END SUBROUTINE QUANTILE
 
-        SUBROUTINE CALC( arg1 , arg2 , arg3 , arg4 , arg5 , arg6 )
+        SUBROUTINE CALC( e_pos , e_vel , e_acc , p_pos , p_vel , p_acc )
 
-            REAL(fp) , DIMENSION(3,ne) :: arg1 , arg2 , arg3
-            REAL(fp) , DIMENSION(3,np) :: arg4 , arg5 , arg6
+            IMPLICIT NONE
+
+            REAL(fp) , DIMENSION(3,ne) :: e_pos , e_vel , e_acc
+            REAL(fp) , DIMENSION(3,np) :: p_pos , p_vel , p_acc
 
             DO count1 = 1 , ne
 
                 DO count2 = 1 , count1 - 1
-    
-                    dx = arg1(1,count1) - arg1(1,count2)
-                    dy = arg1(2,count1) - arg1(2,count2)
-                    dz = arg1(3,count1) - arg1(3,count2)
-    
-                    r = sqrt( dx**2 + dy**2 + dz**2 )
-    
-                    Fe = k * q_e * q_e / r**2 * POINT( dx , dy , dz )
-                    Fg = -G * m_e * m_e / r**2 * POINT( dx , dy , dz )
-                    Fm = M * q_e * q_e / r**2 * CROSS( arg2(:,count2) , &
-                        & CROSS( arg2(:,count1) , (/dx,dy,dz/)/r ) &
-                    & )
-    
-                    arg3(:,count1) = arg3(:,count1) + ( Fe + Fg + Fm ) / m_e
-    
-                    arg3(:,count2) = arg3(:,count2) - ( Fe + Fg + Fm ) / m_e
-    
+
+                    r = e_pos(:,count1) - e_pos(:,count2)
+
+                    Fe = k * q_e * q_e / NORM2(r)**2 * UNIT(r)
+                    Fg = -G * m_e * m_e / NORM2(r)**2 * UNIT(r)
+                    Fm = M * q_e * q_e * CROSS( e_vel(:,count1) , CROSS( e_vel(:,count2) , r ) )
+
+                    e_acc(:,count1) = e_acc(:,count1) + ( Fe + Fg + Fm ) / m_e
+
+                    e_acc(:,count2) = e_acc(:,count2) - ( Fe + Fg + Fm ) / m_e
+
                 END DO
-    
+
                 DO count2 = 1 , np
-    
-                    dx = arg1(1,count1) - arg4(1,count2)
-                    dy = arg1(2,count1) - arg4(2,count2)
-                    dz = arg1(3,count1) - arg4(3,count2)
-    
-                    r = sqrt( dx**2 + dy**2 + dz**2 )
-    
-                    Fe = k * q_e * q_p / r**2 * POINT( dx , dy , dz )
-                    Fg = -G * m_e * m_p / r**2 * POINT( dx , dy , dz )
-                    Fm = M * q_e * q_p / r**2 * CROSS( arg5(:,count2) , &
-                        & CROSS( arg2(:,count1) , (/dx,dy,dz/)/r ) &
-                    & )
-    
-                    arg3(:,count1) = arg3(:,count1) + ( Fe + Fg + Fm ) / m_e
-    
-                    arg6(:,count2) = arg6(:,count2) - ( Fe + Fg + Fm ) / m_p
-    
+
+                    r = e_pos(:,count1) - p_pos(:,count2)
+
+                    Fe = k * q_e * q_p / NORM2(r)**2 * UNIT(r)
+                    Fg = -G * m_e * m_p / NORM2(r)**2 * UNIT(r)
+                    Fm = M * q_e * q_p * CROSS( e_vel(:,count1) , CROSS( p_vel(:,count2) , r ) )
+
+                    e_acc(:,count1) = e_acc(:,count1) + ( Fe + Fg + Fm ) / m_e
+
+                    p_acc(:,count2) = p_acc(:,count2) - ( Fe + Fg + Fm ) / m_p
+
                 END DO
-    
+
             END DO
-    
+
             DO count1 = 1 , np
-    
+
                 DO count2 = 1 , count1 - 1
-    
-                    dx = arg4(1,count1) - arg4(1,count2)
-                    dy = arg4(2,count1) - arg4(2,count2)
-                    dz = arg4(3,count1) - arg4(3,count2)
-        
-                    r = sqrt( dx**2 + dy**2 + dz**2 )
-        
-                    Fe = k * q_p * q_p / r**2 * POINT( dx , dy , dz )
-                    Fg = -G * m_p * m_p / r**2 * POINT( dx , dy , dz )
-                    Fm = M * q_p * q_p / r**2 * CROSS( arg5(:,count2) , &
-                        & CROSS( arg5(:,count1) , (/dx,dy,dz/)/r ) &
-                    & )
-    
-                    arg6(:,count1) = arg6(:,count1) + ( Fe + Fg + Fm ) / m_p
-    
-                    arg6(:,count2) = arg6(:,count2) - ( Fe + Fg + Fm ) / m_p
-    
+
+                    r = p_pos(:,count1) - p_pos(:,count2)
+
+                    Fe = k * q_p * q_p / NORM2(r)**2 * UNIT(r)
+                    Fg = -G * m_p * m_p / NORM2(r)**2 * UNIT(r)
+                    Fm = M * q_p * q_p * CROSS( p_vel(:,count1) , CROSS( p_vel(:,count2) , r ) )
+
+                    p_acc(:,count1) = p_acc(:,count1) + ( Fe + Fg + Fm ) / m_p
+
+                    p_acc(:,count2) = p_acc(:,count2) - ( Fe + Fg + Fm ) / m_p
+
                 END DO
-    
+
             END DO
 
         END SUBROUTINE CALC
