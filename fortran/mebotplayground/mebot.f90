@@ -11,9 +11,9 @@ PROGRAM MAIN
 
         INTEGER(ip) , PARAMETER :: ne = 1 , np = 1
 
-        REAL(fp) , DIMENSION(3,ne) :: e_r , e_v , e_a , e_a2
+        REAL(fp) , DIMENSION(3,ne) :: e_r , e_v , e_a , e_a2 , e_a3 , e_a4 , e_a5 , e_a6 , e_a7 , e_a8
 
-        REAL(fp) , DIMENSION(3,np) :: p_r , p_v , p_a , p_a2
+        REAL(fp) , DIMENSION(3,np) :: p_r , p_v , p_a , p_a2 , p_a3 , p_a4 , p_a5 , p_a6 , p_a7 , p_a8
 
         REAL(fp) :: T , dT
 
@@ -38,9 +38,9 @@ PROGRAM MAIN
 
     !
 
-    OPEN( unit = 1 , file = "nbody_e2.txt" )
-    OPEN( unit = 2 , file = "nbody_p2.txt" )
-    OPEN( unit = 3 , file = "energy2.txt" )
+    OPEN( unit = 1 , file = "nbody_e.txt" )
+    OPEN( unit = 2 , file = "nbody_p.txt" )
+    OPEN( unit = 3 , file = "energy.txt" )
 
     CALL QUANTILE( e_r , 0.0_fp , (/1.0_fp,0.0_fp,0.0_fp/) )
     CALL QUANTILE( e_v , 0.0_fp , (/0.0_fp,14.0_fp,0.0_fp/) )
@@ -102,21 +102,39 @@ PROGRAM MAIN
 
         e_a = 0.0_fp
         e_a2 = 0.0_fp
+        e_a3 = 0.0_fp
+        e_a4 = 0.0_fp
+        e_a5 = 0.0_fp
+        e_a6 = 0.0_fp
+        e_a7 = 0.0_fp
+        e_a8 = 0.0_fp
 
         p_a = 0.0_fp
         p_a2 = 0.0_fp
+        p_a3 = 0.0_fp
+        p_a4 = 0.0_fp
+        p_a5 = 0.0_fp
+        p_a6 = 0.0_fp
+        p_a7 = 0.0_fp
+        p_a8 = 0.0_fp
 
         CALL CALC( e_r , e_v , e_a , p_r , p_v , p_a )
+        CALL CALC( e_r + 0.25 * e_a * dT**2 , e_v , e_a2 , p_r + 0.25 * p_a * dT**2 , p_v , p_a2 )
+        CALL CALC( e_r + 0.25 * e_a2 * dT**2 , e_v , e_a3 , p_r + 0.25 * p_a2 * dT**2 , p_v , p_a3 )
+        CALL CALC( e_r + 0.25 * e_a3 * dT**2 , e_v , e_a4 , p_r + 0.25 * p_a3 * dT**2 , p_v , p_a4 )
 
-        e_r = e_r + e_v * dT + 0.5 * e_a * dT**2
+        e_r = e_r + e_v * dT + ( e_a + 2*e_a2 + 2*e_a3 + e_a4 ) * dT**2 / 12
 
-        p_r = p_r + p_v * dT + 0.5 * p_a * dT**2
+        p_r = p_r + p_v * dT + ( p_a + 2*p_a2 + 2*p_a3 + p_a4 ) * dT**2 / 12
 
-        CALL CALC( e_r , e_v , e_a2 , p_r , p_v , p_a2 )
+        CALL CALC( e_r , e_v , e_a5 , p_r , p_v , p_a5 )
+        CALL CALC( e_r , e_v + 0.5 * e_a5 * dT , e_a6 , p_r , p_v + 0.5 * p_a5 * dT , p_a6 )
+        CALL CALC( e_r , e_v + 0.5 * e_a6 * dT , e_a7 , p_r , p_v + 0.5 * p_a6 * dT , p_a7 )
+        CALL CALC( e_r , e_v + 0.5 * e_a7 * dT , e_a8 , p_r , p_v + 0.5 * p_a7 * dT , p_a8 )
 
-        e_v = e_v + 0.5 * ( e_a + e_a2 ) * dT
+        e_v = e_v + ( e_a + 2*e_a2 + 2*e_a3 + e_a4 + e_a5 + 2*e_a6 + 2*e_a7 + e_a8 ) * dT / 12
 
-        p_v = p_v + 0.5 * ( p_a + p_a2 ) * dT
+        p_v = p_v + ( p_a + 2*p_a2 + 2*p_a3 + p_a4 + p_a5 + 2*p_a6 + 2*p_a7 + p_a8 ) * dT / 12
     
     END DO
 
