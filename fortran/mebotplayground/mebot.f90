@@ -9,7 +9,7 @@ PROGRAM MAIN
 
         INTEGER(ip) :: n , count0 , count1 , count2
 
-        INTEGER(ip) , PARAMETER :: ne = 1 , np = 1
+        INTEGER(ip) , PARAMETER :: ne = 20 , np = 20
 
         REAL(fp) , DIMENSION(3,ne) :: e_r , e_v , e_a , e_a2 , e_a3 , e_a4 , e_a5 , e_a6 , e_a7 , e_a8
 
@@ -31,8 +31,20 @@ PROGRAM MAIN
         REAL(fp) , PARAMETER :: m_e = 9.1093837015E-31_fp , m_p = 1.67262192369E-27_fp
         REAL(fp) , PARAMETER :: q_e = -1.6021766208E-19_fp , q_p = 1.6021766208E-19_fp
 
+        REAL(fp) , PARAMETER :: &
+        & e_rs = 0.1 , &
+        & e_vs = 0.1 , &
+        & p_rs = 0.1 , &
+        & p_vs = 0.1
+
+        REAL(fp) , PARAMETER , DIMENSION(3) :: &
+        & e_r0 = (/0.0_fp,0.0_fp,0.0_fp/) , &
+        & e_v0 = (/0.0_fp,14.0_fp,0.0_fp/) , &
+        & p_r0 = e_r0*m_e/m_p , &
+        & p_v0 = e_v0*m_e/m_p
+
         T = 1.0E+0_fp
-        dT = 1.0E-4_fp
+        dT = 1.0E-6_fp
 
         n = NINT(T/dT)
 
@@ -42,13 +54,19 @@ PROGRAM MAIN
     OPEN( unit = 2 , file = "nbody_p.txt" )
     OPEN( unit = 3 , file = "energy.txt" )
 
-    CALL QUANTILE( e_r , 0.0_fp , (/1.0_fp,0.0_fp,0.0_fp/) )
-    CALL QUANTILE( e_v , 0.0_fp , (/0.0_fp,14.0_fp,0.0_fp/) )
+    CALL QUANTILE( e_r , e_rs , e_r0 )
+    CALL QUANTILE( e_v , e_vs , e_v0 )
     
-    CALL QUANTILE( p_r , 0.0_fp , (/-1.0_fp,0.0_fp,0.0_fp/)*m_e/m_p )
-    CALL QUANTILE( p_v , 0.0_fp , (/0.0_fp,-14.0_fp,0.0_fp/)*m_e/m_p )
+    CALL QUANTILE( p_r , p_rs , p_r0 )
+    CALL QUANTILE( p_v , p_vs , p_v0 )
 
     DO count0 = 1 , n
+
+        IF ( MOD( count0 , n/100 ) == 0 ) THEN
+
+            PRINT * , count0
+
+        END IF
 
         WRITE( unit = 1 , fmt = * ) ( e_r(:,count1) , count1 = 1 , ne )
         WRITE( unit = 2 , fmt = * ) ( p_r(:,count1) , count1 = 1 , np )
@@ -135,6 +153,8 @@ PROGRAM MAIN
         e_v = e_v + ( e_a + 2*e_a2 + 2*e_a3 + e_a4 + e_a5 + 2*e_a6 + 2*e_a7 + e_a8 ) * dT / 12
 
         p_v = p_v + ( p_a + 2*p_a2 + 2*p_a3 + p_a4 + p_a5 + 2*p_a6 + 2*p_a7 + p_a8 ) * dT / 12
+
+        CALL COLLECT( e_r , e_v , p_r , p_v )
     
     END DO
 
@@ -183,6 +203,51 @@ PROGRAM MAIN
             array(3,:) = array(3,:) + offset(3)
 
         END SUBROUTINE QUANTILE
+
+        SUBROUTINE COLLECT( e_pos , e_vel , p_pos , p_vel )
+
+            IMPLICIT NONE
+
+            REAL(fp) , DIMENSION(3,ne) :: e_pos , e_vel
+            REAL(fp) , DIMENSION(3,np) :: p_pos , p_vel
+
+            DO count1 = 1 , ne
+
+                IF ( NORM2(e_pos(:,count1)) > 10 ) THEN
+
+                    CALL RANDOM_NUMBER(e_pos(:,count1))
+
+                    e_pos(:,count1) = e_rs * ( 5*LOG(e_pos(:,count1)/(1-e_pos(:,count1)))/12 + 0.9*( e_pos(:,count1) - 0.5 ) )
+                    e_pos(:,count1) = e_pos(:,count1) + e_r0
+
+                    CALL RANDOM_NUMBER(e_vel(:,count1))
+
+                    e_vel(:,count1) = e_vs * ( 5*LOG(e_vel(:,count1)/(1-e_vel(:,count1)))/12 + 0.9*( e_vel(:,count1) - 0.5 ) )
+                    e_vel(:,count1) = e_vel(:,count1) + e_v0
+
+                END IF
+
+            END DO
+
+            DO count1 = 1 , np
+
+                IF ( NORM2(p_pos(:,count1)) > 10 ) THEN
+
+                    CALL RANDOM_NUMBER(p_pos(:,count1))
+
+                    p_pos(:,count1) = p_rs * ( 5*LOG(p_pos(:,count1)/(1-p_pos(:,count1)))/12 + 0.9*( p_pos(:,count1) - 0.5 ) )
+                    p_pos(:,count1) = p_pos(:,count1) + p_r0
+
+                    CALL RANDOM_NUMBER(p_vel(:,count1))
+
+                    p_vel(:,count1) = p_vs * ( 5*LOG(p_vel(:,count1)/(1-p_vel(:,count1)))/12 + 0.9*( p_vel(:,count1) - 0.5 ) )
+                    p_vel(:,count1) = p_vel(:,count1) + p_v0
+
+                END IF
+
+            END DO
+
+        END SUBROUTINE COLLECT
 
         SUBROUTINE CALC( e_pos , e_vel , e_acc , p_pos , p_vel , p_acc )
 
